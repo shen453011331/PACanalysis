@@ -46,7 +46,7 @@ verify_params = {'thre': args.thre}
 lprocess = ContactLocate(locate_params, track_params, refine_params, verify_params)
 rprocess = ContactLocate(locate_params, track_params, refine_params, verify_params)
 testShow = PlotResult()
-system_path = 'C:/Users/Administrator/Documents/sy_paper_contactAnalysis/new/'
+system_path = 'D:/PACanalysis/'
 saveResult = SaveResult(system_path)
 pro3d = Process3D()
 ana_data = AnalysisData(saveResult, pro3d, testShow)
@@ -61,10 +61,11 @@ if __name__ == '__main__':
     ldata.load_horn_files(left_horn_file)
     rdata.load_horn_files(right_horn_file)
 
-    for i in range(5000):
+    for i in range(10):
         print('# %d:'% (i+1))
         image_l, fImage_l, _, _ = ldata.load(i + 1)
         image_r, fImage_r, _, _ = rdata.load_R(i + 1)
+
         # testShow.plot_two_images(image_l, image_r)
         points_lft, points_l_lft, time_process_l = lprocess.do_multiTrack_update(image_l, fImage_l, i + 1)
         points_rgt, points_l_rgt, time_process_r = rprocess.do_multiTrack_update(image_r, fImage_r, i + 1)

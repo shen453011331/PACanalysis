@@ -12,7 +12,7 @@ imageHeight = 900
 
 class ContactLocate(object):
 
-    def __init__(self, locate_params, track_params):
+    def __init__(self, locate_params, track_params, refine_params, verify_params):
         self.locate_params = locate_params
         self.track_params = track_params
         self.meangrayr = self.locate_params['meangrayr']
@@ -45,7 +45,7 @@ class ContactLocate(object):
         self.trackLength = 0  # 控制跟踪序列init更新间距
 
         # verify
-        self.pointsDisT = [10, 35]
+        self.pointsDisT = [10, verify_params['thre']]
 
         # bool
         self.b_track = False
@@ -137,8 +137,10 @@ class ContactLocate(object):
         self.thisislocate = False
 
         if not self.b_track:
+            self.trackLength = 0
             self.thisislocate = True
             points = self.do_locate(fImage)
+            # self.show.show_locate_points(image, self.rgtpoint)
             self.points_r = self.do_refine(fImage, points)
             self.b_track = True
             self.b_init = False  # to init tracking
@@ -149,12 +151,18 @@ class ContactLocate(object):
             self.points_r = self.do_refine(fImage, points)
             if index % 100 == 0:
                 print('Num %d do tracking' % index)
+                self.trackLength = self.trackLength + 1
+                if self.trackLength > 100:
+                    self.trackLength = 0
+                    self.b_init = False
         if not self.verify(fImage, points, self.points_r):
             self.b_track = False
 
             print("locate Error #%d" % index)
-            points = np.zeros((2, 2), dtype='float')
-            self.points_r = points
+            # points = np.zeros((2, 2), dtype='float')
+            points = self.do_locate(fImage)
+            self.points_r = self.do_refine(fImage, points)
+            # self.points_r = points
         elif self.thisislocate:
             self.getPara(fImage)
         self.locatePoints = points
@@ -164,7 +172,7 @@ class ContactLocate(object):
         pass
 
     def do_locate(self, fImage):
-        LineROI = [0, 400, 300, 2100]
+        LineROI = [0, 400, 300, 1600]   #  2100
         PanROI = [300, 550, 800, 1600]  #  300 550
         self.updateTemplate()
         self.locateImage(LineROI, PanROI, fImage)
@@ -288,9 +296,14 @@ class ContactLocate(object):
 
     def doCrossingPoints(self, lftpoint, rgtpoint, ptgpoint):
         # 根据模板匹配获取的点集进行直线交错
-        self.kl, bl, self.il = ransac(lftpoint, 5)
-        self.kr, br, self.ir = ransac(rgtpoint, 5)
-        self.kh, bh, self.ih = ransac(ptgpoint, 10)
+        if lftpoint.shape[1] < 3 or lftpoint.shape[1] < 3 or lftpoint.shape[1] < 3:
+            self.kl = 0
+            self.kr = 0
+            self.kh = 0
+        else:
+            self.kl, bl, self.il = ransac(lftpoint, 5)
+            self.kr, br, self.ir = ransac(rgtpoint, 5)
+            self.kh, bh, self.ih = ransac(ptgpoint, 10)
         if self.kl == 0 or self.kh == 0:
             xl = np.zeros((1, 2), dtype='float')
             xr = np.zeros((1, 2), dtype='float')
@@ -422,43 +435,22 @@ class ContactLocate(object):
                     sum_min += min_temp[0]
                     sum_num += 1
         #             print(max_temp,min_temp)
-        mean_max = sum_max / sum_num
-        mean_min = sum_min / sum_num
-        self.meangrayr = mean_max
-        self.disr = round((mean_max - mean_min) * 256)
-        # sum_max = 0
-        # sum_min = 0
-        # sum_num = 0
-        # for i in range(len(self.ih)):
-        #     if (self.ih[i] == True):
-        #         temp_y = self.ptgpoint[1, i] - self.widpatchc
-        #         temp_x = self.ptgpoint[0, i]
-        #         if (self.locatePoints[0, 0] < temp_x < self.locatePoints[1, 0]):
-        #             temp_noneuse_a = 0
-        #         else:
-        #             temp = fImage[temp_y:temp_y + self.widpatchc * 2, temp_x:temp_x + 1]
-        #             list_temp = temp.tolist()
-        #             max_temp = max(list_temp)
-        #             min_temp = min(list_temp)
-        #             sum_max += max_temp[0]
-        #             sum_min += min_temp[0]
-        #             sum_num += 1
-        # #             print(max_temp,min_temp)
-        # mean_max = sum_max / sum_num
-        # mean_min = sum_min / sum_num
-        # self.meangrayc = mean_max
-        # self.disc = round((mean_max - mean_min) * 256)
-        self.meangrayc = self.meangrayr
-        self.disc = self.disr
-        print ('parameter changed')
-        print('mean: %f, dis: %f'%(self.meangrayr, self.disr))
+        if sum_num !=0:
+            mean_max = sum_max / sum_num
+            mean_min = sum_min / sum_num
+            self.meangrayr = mean_max
+            self.disr = round((mean_max - mean_min) * 256)
+            self.meangrayc = self.meangrayr
+            self.disc = self.disr
+            print ('parameter changed')
+            print('mean: %f, dis: %f'%(self.meangrayr, self.disr))
 
 
 def ransac(points, threshold):
     # 进行ransac，用于保障定位的鲁棒性
     ransac_model = RANSACRegressor(LinearRegression(), max_trials=100, min_samples=3,
                                    loss='squared_loss', stop_n_inliers=8,
-                                   residual_threshold=threshold, random_state=0)
+                                   residual_threshold=threshold, random_state=None)
     X = points[0:1, :].T
     Y = points[1:, :].T
 
