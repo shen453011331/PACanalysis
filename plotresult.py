@@ -11,6 +11,7 @@ from pyecharts.faker import Collector, Faker
 class PlotResult(object):
     def __init__(self):
         self.boolLocateshow = 1
+        self.plot_line_path = ''
         pass
 
     def plot_locate_result(self, image, points, wait_time=1):
@@ -132,7 +133,8 @@ class PlotResult(object):
         y_data_2 = np.around(np.abs(y2[:-1] - y2[1:]), decimals=2).tolist()
         return x_data, y_data_1, y_data_2
 
-    def plot_lines(self, x_data, y_data, filename):
+    def plot_lines(self, x_data, y_data, filename_):
+        filename = self.plot_line_path + filename_
         background_color_js = (
             "new echarts.graphic.LinearGradient(0, 0, 0, 1, "
             "[{offset: 0, color: '#c86589'}, {offset: 1, color: '#06a7ff'}], false)"
