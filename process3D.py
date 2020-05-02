@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+
+
 class init_para(object):
     def __init__(self, fx, fy, u0, v0, k1, k2):
         self.fx = fx
@@ -9,6 +11,7 @@ class init_para(object):
         self.k1 = k1
         self.k2 = k2
         self.Matrix= np.array([[fx,0,u0], [0,fy,v0], [0,0,1]], dtype='float')
+
 
 class exte_para(object):
     def __init__(self, R, T):
@@ -20,8 +23,8 @@ init_left = init_para(4226.17, 4226.39,
                       1177.99, 932.03-500,
                       0.384, 0.0)
 init_right = init_para(4270.22, 4278.11,
-                      1156.43, 943.39-500,
-                      0.323, 0.0)
+                       1156.43, 943.39-500,
+                       0.323, 0.0)
 # init_left = init_para(4324.736356157503, 4325.040423297528,
 #                       1110.831942266570, 820.527904092132-600,
 #                       -0.029480163150041, 0.0)
