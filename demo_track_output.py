@@ -48,31 +48,44 @@ if __name__ == '__main__':
     gt_file_l = 'D:\PACanalysis\gt'
     num = 10000
     df_gt = ldata.load_gt_l(gt_file_l, num)
-    title = 'locate_refine_update'
 
+    title = 'track_refine_hash_modify'
+    with open(os.path.join(os.path.join(system_path, 'result', title, 'test_track.pkl')), 'rb') as file:
+        track_output = pickle.loads(file.read())
     with open(os.path.join(os.path.join(system_path, 'result', title, 'test_locate.pkl')), 'rb') as file:
         locate_output = pickle.loads(file.read())
     err_locate_num = 0
-
+    locate_num = 0
     for i in range(num):
         img_idx = i + 1
         if img_idx % 100 == 0:
             print('image No. {}'.format(img_idx))
-        dict_data = locate_output.result_list[img_idx - 1]
-        if not verify_locate(locate_output, img_idx):
-            err_locate_num = err_locate_num + 1
-        else:
+        if img_idx in locate_output.index_list:
+            locate_num = locate_num + 1
+            index = locate_output.index_list.index(img_idx)
+            dict_data = locate_output.result_list[index]
+            if not verify_locate(locate_output, img_idx):
+                err_locate_num = err_locate_num + 1
+            else:
+                points = np.vstack((dict_data['points_l'], dict_data['points_r']))
+                ana_data.compare_with_gt(df_gt, points, img_idx)
+        elif img_idx in track_output.index_list:
+            index = track_output.index_list.index(img_idx)
+            dict_data = track_output.result_list[index]
             points = np.vstack((dict_data['points_l'], dict_data['points_r']))
             ana_data.compare_with_gt(df_gt, points, img_idx)
 
-
-    print('locate not success {}'.format(1-len(ana_data.df_gt_err)/num))
+    print('locate  {}'.format(locate_num / num))
+    print('locate not success {}'.format(err_locate_num / num))
     df_gt_err = ana_data.df_gt_err
     df_temp = df_gt_err[(df_gt_err['l_err'] < 10) & (df_gt_err['r_err'] < 10)]
-    print('locate missing {}, other{}'.format((len(df_gt_err) - len(df_temp))/num, len(df_temp)/num))
-    accuracy = (np.mean(df_temp['l_err'].values) + np.mean(df_temp['r_err'].values))/2
-    print('locate precise is {:.2f}'.format(accuracy))
+    df_temp2 = df_gt_err[(df_gt_err['l_err'] > 10) | (df_gt_err['r_err'] > 10)]
+    df_temp2.to_csv('track_temp2.csv')
+    df_temp.to_csv('track_temp.csv')
+    print('missing {}, other{}'.format((len(df_gt_err) - len(df_temp)) / num, len(df_temp) / num))
+    accuracy = (np.mean(df_temp['l_err'].values) + np.mean(df_temp['r_err'].values)) / 2
+    print('track precise is {:.2f}'.format(accuracy))
     df_temp3 = df_gt_err[(df_gt_err['l_err'] < 50) & (df_gt_err['r_err'] < 50)]
     print('50 missing {}, other{}'.format((len(df_gt_err) - len(df_temp3)) / num, len(df_temp3) / num))
     accuracy_50 = (np.mean(df_temp3['l_err'].values) + np.mean(df_temp3['r_err'].values)) / 2
-    print('50 locate precise is {:.2f}'.format(accuracy_50))
+    print('50 track precise is {:.2f}'.format(accuracy_50))

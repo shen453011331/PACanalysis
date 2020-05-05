@@ -133,20 +133,32 @@ class PlotResult(object):
         return image
 
     def draw_locate(self, img, locate_output, idx):
-        dict_data = locate_output.result_list[idx - 1]
-        assert dict_data['index'] == idx, 'old {}, new {}'.format(dict_data['index'], idx)
-        img = self.draw_line_on_image(img, dict_data['kl'], dict_data['bl'], (255, 0, 0))
-        img = self.draw_line_on_image(img, dict_data['kr'], dict_data['br'], (255, 0, 0))
-        img = self.draw_line_on_image(img, dict_data['kh'], dict_data['bh'], (255, 0, 0))
-        lftpoint = dict_data['lftpoint']
-        rgtpoint = dict_data['rgtpoint']
-        ptgpoint = dict_data['ptgpoint']
-        img = self.circle_points_on_image(img, lftpoint.T)
-        img = self.circle_points_on_image(img, rgtpoint.T)
-        img = self.circle_points_on_image(img, ptgpoint.T)
-        img = self.circle_points_on_image(img, lftpoint[:, dict_data['il']].T, (255, 0, 0))
-        img = self.circle_points_on_image(img, rgtpoint[:, dict_data['ir']].T, (255, 0, 0))
-        img = self.circle_points_on_image(img, ptgpoint[:, dict_data['ih']].T, (255, 0, 0))
-        img = self.circle_points_on_image(img, dict_data['points_l'], (0, 0, 255))
-        img = self.circle_points_on_image(img, dict_data['points_r'], (0, 0, 255))
+        if idx in locate_output.index_list:
+            index = locate_output.index_list.index(idx)
+            dict_data = locate_output.result_list[index]
+            img = self.draw_line_on_image(img, dict_data['kl'], dict_data['bl'], (255, 0, 0))
+            img = self.draw_line_on_image(img, dict_data['kr'], dict_data['br'], (255, 0, 0))
+            img = self.draw_line_on_image(img, dict_data['kh'], dict_data['bh'], (255, 0, 0))
+            lftpoint = dict_data['lftpoint']
+            rgtpoint = dict_data['rgtpoint']
+            ptgpoint = dict_data['ptgpoint']
+            img = self.circle_points_on_image(img, lftpoint.T)
+            img = self.circle_points_on_image(img, rgtpoint.T)
+            img = self.circle_points_on_image(img, ptgpoint.T)
+            img = self.circle_points_on_image(img, lftpoint[:, dict_data['il']].T, (255, 0, 0))
+            img = self.circle_points_on_image(img, rgtpoint[:, dict_data['ir']].T, (255, 0, 0))
+            img = self.circle_points_on_image(img, ptgpoint[:, dict_data['ih']].T, (255, 0, 0))
+            img = self.circle_points_on_image(img, dict_data['points_l'], (0, 0, 255))
+            img = self.circle_points_on_image(img, dict_data['points_r'], (0, 0, 255))
+        return img
+
+    def draw_track(self, img, track_output, idx):
+        if idx in track_output.index_list:
+            index = track_output.index_list.index(idx)
+            dict_data = track_output.result_list[index]
+            img = self.circle_points_on_image(img, dict_data['points_l'], (0, 0, 255))
+            img = self.circle_points_on_image(img, dict_data['points_r'], (0, 0, 255))
+            pt1 = (int(dict_data['rect'][0]), int(dict_data['rect'][1]))
+            pt2 = (int(pt1[0] + dict_data['rect'][2]), int(pt1[1] + dict_data['rect'][3]))
+            img = cv2.rectangle(img, pt1, pt2, (255, 0, 255), 3)
         return img

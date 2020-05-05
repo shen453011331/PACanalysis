@@ -23,17 +23,19 @@ class OutputLocate(object):
 
     def __init__(self, params):
         self.params = params
+        self.index_list = []
         self.result_list = []
 
     def save_result(self, index, points_l, points_r, lftpoint, rgtpoint, ptgpoint, kl, kr, kh,
                     bl, br, bh, il, ir, ih):
+        self.index_list.append(index)
         result = dict({'index': index, 'points_l': points_l, 'points_r': points_r,
                        'lftpoint': lftpoint, 'rgtpoint': rgtpoint, 'ptgpoint': ptgpoint,
                        'kl': kl, 'kr': kr, 'kh': kh,
                        'bl': bl, 'br': br, 'bh': bh,
                        'il': il, 'ir': ir, 'ih': ih})
         self.result_list.append(result)
-        assert index == len(self.result_list), 'index:{}, len:{}'.format(index, len(self.result_list))
+        # assert index == len(self.result_list), 'index:{}, len:{}'.format(index, len(self.result_list))
 
 
 class LocateParams(object):
@@ -224,7 +226,8 @@ class Locate(object):
     def do_update(self, img, idx):
         locate_output = self.output_locate
         # 无需output时，可将该不放呢修改为，输入一组包含当前locate中间参数的值，替换掉locate_output的输入
-        dict_data = locate_output.result_list[idx - 1]
+        index = locate_output.index_list.index(idx)
+        dict_data = locate_output.result_list[index]
         self.b_update = verify_locate(locate_output, idx)
         if self.b_update:
             il = dict_data['il']
@@ -272,6 +275,7 @@ def ransac(points, threshold):
     ransac_model = RANSACRegressor(LinearRegression(), max_trials=20, min_samples=3,
                                    loss='squared_loss', stop_n_inliers=8,
                                    residual_threshold=threshold, random_state=None)
+    line_model = LinearRegression()
     x = points[0:1, :].T
     y = points[1:, :].T
     ransac_model.fit(x, y)
@@ -281,6 +285,10 @@ def ransac(points, threshold):
         d = 0
         k = 0
     else:
+        line_model.fit(x[inlier_mask, :], y[inlier_mask, :])
+
+        k_temp = line_model.coef_
+        d_temp = line_model.intercept_
         d = ransac_model.predict([[0]])[0, 0]
         k = ransac_model.predict([[1]])[0, 0] - ransac_model.predict([[0]])[0, 0]
     return k, d, inlier_mask
@@ -289,27 +297,37 @@ def ransac(points, threshold):
 def do_refine(img, points):
     wintx, winty = 9, 9
     points_temp = np.float32(points).copy()
-    float_img = np.float32(img)
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 0.2)
-    corners = cv2.cornerSubPix(float_img, points_temp, (wintx, winty), (-1, -1), criteria)
+    # img and points must be float32
+    corners = cv2.cornerSubPix(img, points_temp, (wintx, winty), (-1, -1), criteria)
     return corners
 
+
 def verify_locate(locate_output, idx):
-    dict_data = locate_output.result_list[idx - 1]
+    # for track
+    index = locate_output.index_list.index(idx)
+    dict_data = locate_output.result_list[index]
+    # locate
+    # dict_data = locate_output.result_list[idx - 1]
     # only for left
     klr_value, kh_value = [-1, -3.5], [1, -0.5]
     if dict_data['kl'] == 0 or dict_data['kr'] == 0 or dict_data['kh'] == 0:
+        print('fitting line error')
         return False
     if abs(dict_data['kl'] -  dict_data['kr']) > 1:
+        print('two fitting line do not match error')
         return False
     # only for left
     if dict_data['kl'] > klr_value[0] or dict_data['kl'] < klr_value[1] or \
             dict_data['kr'] > klr_value[0] or dict_data['kr'] < klr_value[1]:
+        print('fitting line k error')
         return False
     if dict_data['kh'] > kh_value[0] or dict_data['kh'] < kh_value[1]:
+        print('fitting line kh error')
         return False
     # only for left
     if not 30 > np.abs(dict_data['points_l'][0] - dict_data['points_r'][0]) > 12:
+        print('points distance error')
         return False
     return True
 
