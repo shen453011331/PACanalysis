@@ -28,6 +28,7 @@ class DataLoader(object):
         start = time.clock()
         self.image = cv2.imread('%s/%06d.jpg' % (self.data_path, data_idx), cv2.IMREAD_GRAYSCALE)
         self.fImage = cv2.normalize(self.image.astype('float'), None, 0.0, 1.0, cv2.NORM_MINMAX)
+        self.fImage = self.fImage.astype(np.float32)
         self.eqI = cv2.equalizeHist(self.image)
         elapsed = time.clock() - start
         return self.image, self.fImage, elapsed, self.eqI

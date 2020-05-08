@@ -39,9 +39,11 @@ class OutputLocate(object):
 
 
 class LocateParams(object):
-    def __init__(self, template, area):
+    def __init__(self, template, area, klr_value, kh_value):
         self.area = area
         self.template = template
+        self.klr_value = klr_value  # [1, -0.5]
+        self.kh_value = kh_value  # [-1, -3.5]
 
 
 class LocateArea(object):
@@ -310,18 +312,30 @@ def verify_locate(locate_output, idx):
     # locate
     # dict_data = locate_output.result_list[idx - 1]
     # only for left
-    klr_value, kh_value = [-1, -3.5], [1, -0.5]
+    klr_value, kh_value = locate_output.params.klr_value, locate_output.params.kh_value
+    # klr_value, kh_value = [-1, -3.5], [1, -0.5]
     if dict_data['kl'] == 0 or dict_data['kr'] == 0 or dict_data['kh'] == 0:
         print('fitting line error')
         return False
-    if abs(dict_data['kl'] -  dict_data['kr']) > 1:
-        print('two fitting line do not match error')
-        return False
     # only for left
-    if dict_data['kl'] > klr_value[0] or dict_data['kl'] < klr_value[1] or \
-            dict_data['kr'] > klr_value[0] or dict_data['kr'] < klr_value[1]:
-        print('fitting line k error')
-        return False
+    if klr_value[0] < 2:   # cause left is 1  and right is 3
+        if abs(dict_data['kl'] - dict_data['kr']) > 1:
+            print('two fitting line do not match error')
+            return False
+
+        if dict_data['kl'] > klr_value[0] or dict_data['kl'] < klr_value[1] or \
+                dict_data['kr'] > klr_value[0] or dict_data['kr'] < klr_value[1]:
+            print('fitting line k error')
+            return False
+    else:  # for right
+        if dict_data['kl'] != 0:
+            if abs(dict_data['kl'] - dict_data['kr'])/dict_data['kl'] > 0.5:
+                print('two fitting line do not match error')
+                return False
+        if not (abs(dict_data['kl']) > klr_value[0] and abs(dict_data['kr']) > klr_value[0]):
+            print('fitting line k error')
+            return False
+
     if dict_data['kh'] > kh_value[0] or dict_data['kh'] < kh_value[1]:
         print('fitting line kh error')
         return False
@@ -330,6 +344,8 @@ def verify_locate(locate_output, idx):
         print('points distance error')
         return False
     return True
+
+
 
 
 

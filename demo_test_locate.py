@@ -25,6 +25,8 @@ parser.add_argument('--disc',  dest='disc', type=int, default=64, help='horn tem
 parser.add_argument('--thre',  dest='thre', type=int, default=25, help='max threshold for verify')
 args = parser.parse_args()
 ldata = DataLoader(args.data_pathL)
+rdata = DataLoader(args.data_pathR)
+
 locate_params = {'meangrayr': args.meangrayr,
                  'meangrayc': args.meangrayc,
                  'widpatchr': args.widpatchr,
@@ -56,10 +58,10 @@ if __name__ == '__main__':
                               locate_params['disr'], locate_params['disc'])
     area = LocateArea([0, 400, 600, 1900], [300, 550, 800, 1600])
     locate = Locate(LocateParams(template, area))
-    num = 10000 # 1000*n
+    num = 5000 # 1000*n
     gt_file_l = 'D:\PACanalysis\gt'
     df_gt = ldata.load_gt_l(gt_file_l, num)
-    title = 'locate_refine_update'
+    title = 'locate_r'
     save_path = '%sresult/%s' % (system_path, title)
     folder = os.path.exists(save_path)
     if not folder:
@@ -70,7 +72,8 @@ if __name__ == '__main__':
         img_idx = i + 1
         if img_idx % 100 == 0:
             print('image No. {} fps {}'.format(img_idx, fps))
-        image_l, fImage_l, _, _ = ldata.load(img_idx)
+        # image_l, fImage_l, _, _ = ldata.load(img_idx)
+        image_l, fImage_l, _, _ = rdata.load_R(img_idx)
         # only locate
         # points, elapsed = locate.do_locate(fImage_l, img_idx)
         # locate + refine

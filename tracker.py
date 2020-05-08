@@ -111,13 +111,14 @@ class TrackerPAC(object):
         self.hash = [hash_l, hash_r]
         # if 0:
         if max(hash_l, hash_r) > self.params.hash_thre:
+            # print('hash verify error l:{}, r:{}'.format(hash_l, hash_r))
             ok = False
-        #     # 额外进行一次判定是否存在电弧
-        #     if len(patch_l[patch_l > 200]) > 10 or len(patch_r[patch_r > 200]) > 10:
-        #         print('NO.{} has spark, continue tracking'.format(index))
-        #         ok = True
-        #         points = self.get_simulate_points(index)
-        #
+            # 额外进行一次判定是否存在电弧, 通过hash和patch亮度联合判断
+            if (len(patch_l[patch_l > 200]) > 50 or len(patch_r[patch_r > 200]) > 50) and max(hash_l, hash_r) > 100:
+                print('NO.{} has spark, continue tracking'.format(index))
+                ok = True
+                points = self.get_simulate_points(index)
+
         if ok:
             points_temp = do_refine(image, points)
             points = choose_refine(points, points_temp)

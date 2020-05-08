@@ -44,6 +44,7 @@ saveResult = SaveResult(system_path)
 pro3d = Process3D()
 ana_data = AnalysisData(saveResult, pro3d, testShow)
 
+
 if __name__ == '__main__':
     template = LocateTemplate(locate_params['widpatchr'], locate_params['widpatchc'],
                               locate_params['meangrayr'], locate_params['meangrayc'],
@@ -52,7 +53,8 @@ if __name__ == '__main__':
     locate = Locate(LocateParams(template, area))
     track = TrackerPAC(TrackParams(100, 50))
 
-    num = 27100  # 1000*n
+
+    num = 20000  # 1000*n
     gt_file_l = 'D:\PACanalysis\gt'
     df_gt = ldata.load_gt_l(gt_file_l, 1000)
 
