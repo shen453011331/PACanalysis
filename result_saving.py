@@ -8,6 +8,18 @@ import matplotlib.pyplot as plt
 import os
 
 
+class OutPutResult(object):
+    def __init__(self):
+        self.result_list = []
+        self.index_list = []
+
+    def save_results(self, p_3d, p3d_lhorn, p3d_rhorn, height, width, distance, theta, index):
+        self.index_list.append(index)
+        result = dict({'index': index, 'points_3d': p_3d, 'p3d_lhorn': p3d_lhorn,
+                       'p3d_rhorn': p3d_rhorn, 'height': height, 'width': width,
+                       'distance': distance, 'theta': theta})
+        self.result_list.append(result)
+
 
 class SaveResult(object):
 

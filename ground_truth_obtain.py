@@ -10,6 +10,8 @@
 # 4.esc后出现接触点和优化点，若红色定位准确，回车到下一帧
 # 5.若红色不准确，esc，重新精确点选两个点，回车
 import cv2
+import os
+import pickle
 import pandas as pd
 import numpy as np
 from plotresult import *
@@ -36,15 +38,15 @@ class GT(object):
         df.to_csv(self.tgt_file, index=False)
         return df
 
-    def changeCsv(self, image, df, df_all, img_num):
+    def changeCsv(self, image, points, df_all, img_num):
         # 第一步，将大小两个图画出来
         # 按回车，不改变，直接跳到下一张
         # 有问题，在大图上点选，重新生成小图
 # 在小图上点选，自动匹配两个点，若ok，回车，保存修改
 # 若不ok， esc， 重新手动在小图点选
         print('process No. %d image' % img_num)
-        points = np.array([[df['point_l_x'].values[0], df['point_l_y'].values[0]],
-                           [df['point_2_x'].values[0], df['point_2_y'].values[0]]], dtype='float')
+        # points = np.array([[df['point_l_x'].values[0], df['point_l_y'].values[0]],
+        #                    [df['point_2_x'].values[0], df['point_2_y'].values[0]]], dtype='float')
 
         width = 200
         height = 200
@@ -53,7 +55,7 @@ class GT(object):
 
         b_relocate = 0
 
-        if coordinates[0] >= 0 and coordinates[1] >= 0:
+        if coordinates[0] > 0 and coordinates[1] > 0:
             y1 = int(coordinates[1])
             y2 = int(coordinates[1] + height)
             x1 = int(coordinates[0])
@@ -75,7 +77,11 @@ class GT(object):
                 b_relocate = 1
                 pass
             elif key == 13:
-                pass
+                num_csv = (img_num - 1) % 1000
+                df_all.iloc[num_csv, 4] = points[0, 0]
+                df_all.iloc[num_csv, 2] = points[1, 0]
+                df_all.iloc[num_csv, 5] = points[0, 1]
+                df_all.iloc[num_csv, 3] = points[1, 1]
         else:
             b_relocate = 1
         if b_relocate:
@@ -145,9 +151,9 @@ if __name__ == '__main__':
     # 初始化类
     gt = GT(path)
     # 读取csv 和 图像文件
-    gt.loadCsv(csv_path)
+    # gt.loadCsv(csv_path)
     # 视频序列展示
-    num_thousand = 10
+    num_thousand = 12
     num_big = num_thousand * 1000
     test_1 = 0  # test 1 using for check sequence is useful or not
     # if false do test 2, to verify each locating in frames
@@ -167,20 +173,44 @@ if __name__ == '__main__':
         new_df = gt.saveCsv(csv_path, num_big)
 
     else:
+        result_path = os.path.join('D:/clean/PACanalysis/','result', 'full_position_lr')
+        with open(os.path.join(os.path.join(result_path, 'test_locate.pkl')), 'rb') as file:
+            locate_output = pickle.loads(file.read())
+        # with open(os.path.join(os.path.join(result_path, 'test_locate_r.pkl')), 'rb') as file:
+        #     locate_output_r = pickle.loads(file.read())
+        # with open(os.path.join(os.path.join(result_path, 'test_track_r.pkl')), 'rb') as file:
+        #     track_output_r = pickle.loads(file.read())
+        with open(os.path.join(os.path.join(result_path, 'test_track.pkl')), 'rb') as file:
+            track_output = pickle.loads(file.read())
+        csv_file = os.path.join('D:/clean/PACanalysis/','gt', '012000.csv')
+        new_csv_file = os.path.join('D:/clean/PACanalysis/','gt', '{:06d}.csv'.format(num_big))
 
-        new_csv_file = '%s%06d.csv' % (csv_path, num_big)
-        new_df = pd.read_csv(new_csv_file)
+        # using for init
+        new_df = pd.read_csv(csv_file)
         # 点选修正
-        startNum = 904
-        # start num as least to be 1
+        startNum = 150
 
+
+        # start num as least to be 1
+        points_zero = np.zeros((2, 2), dtype=np.float32)
         for img_num in range((num_thousand-1) * 1000 + startNum, num_thousand * 1000 + 1):
             # 读取图像
             image = gt.loadImage(img_num)
             # 获取指定df
-            image_df = new_df.loc[new_df['number'] == img_num]
 
-            new_df = gt.changeCsv(image, image_df, new_df, img_num)
+            image_df = new_df.loc[new_df['number'] == img_num]
+            dict_data = None
+            if img_num in locate_output.index_list:
+                index = locate_output.index_list.index(img_num)
+                dict_data = locate_output.result_list[index]
+            elif img_num in track_output.index_list:
+                index = track_output.index_list.index(img_num)
+                dict_data = track_output.result_list[index]
+            # dict_data = locate_output.result_list[img_num - 1]
+            points = np.vstack((dict_data['points_l'], dict_data['points_r'])) \
+                if dict_data is not None else points_zero
+
+            new_df = gt.changeCsv(image, points, new_df, img_num)
             #将修正后的csv保存
             new_df.to_csv(new_csv_file, index=False)
 

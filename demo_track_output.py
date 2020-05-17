@@ -14,6 +14,8 @@ import pickle
 parser = argparse.ArgumentParser(description='Argument parser')
 parser.add_argument('--data_pathL',  dest='data_pathL', type=str, default='F:/dataset/L', help='path of data')
 parser.add_argument('--data_pathR',  dest='data_pathR', type=str, default='F:/dataset/R/JPEGImages', help='path of data')
+parser.add_argument('--title',  dest='title', type=str, default='full_position', help='path of data')
+parser.add_argument('--system_path',  dest='system_path', type=str, default='D:/clean/PACanalysis/', help='path of data')
 
 parser.add_argument('--data_num',  dest='data_num', type=int, default=21732, help='number of data')
 parser.add_argument('--meangrayr',  dest='meangrayr', type=float, default=90.0/255, help='line template 1')
@@ -40,16 +42,16 @@ lprocess = ContactLocate(locate_params, track_params, refine_params, verify_para
 
 if __name__ == '__main__':
     testShow = PlotResult()
-    system_path = 'D:/clean/PACanalysis/'
+    system_path = args.system_path
     saveResult = SaveResult(system_path)
     pro3d = Process3D()
     ana_data = AnalysisData(saveResult, pro3d, testShow)
 
-    gt_file_l = 'D:\PACanalysis\gt'
+    gt_file_l = os.path.join(args.system_path, 'gt')
     num = 10000
     df_gt = ldata.load_gt_l(gt_file_l, num)
 
-    title = 'track_refine_hash_modify'
+    title = args.title
     with open(os.path.join(os.path.join(system_path, 'result', title, 'test_track.pkl')), 'rb') as file:
         track_output = pickle.loads(file.read())
     with open(os.path.join(os.path.join(system_path, 'result', title, 'test_locate.pkl')), 'rb') as file:

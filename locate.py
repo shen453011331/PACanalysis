@@ -320,20 +320,20 @@ def verify_locate(locate_output, idx):
     # only for left
     if klr_value[0] < 2:   # cause left is 1  and right is 3
         if abs(dict_data['kl'] - dict_data['kr']) > 1:
-            print('two fitting line do not match error')
+            print('two fitting line do not match error left ')
             return False
 
         if dict_data['kl'] > klr_value[0] or dict_data['kl'] < klr_value[1] or \
                 dict_data['kr'] > klr_value[0] or dict_data['kr'] < klr_value[1]:
-            print('fitting line k error')
+            print('fitting line k error left')
             return False
     else:  # for right
         if dict_data['kl'] != 0:
             if abs(dict_data['kl'] - dict_data['kr'])/dict_data['kl'] > 0.5:
-                print('two fitting line do not match error')
+                print('two fitting line do not match error right')
                 return False
         if not (abs(dict_data['kl']) > klr_value[0] and abs(dict_data['kr']) > klr_value[0]):
-            print('fitting line k error')
+            print('fitting line k error right')
             return False
 
     if dict_data['kh'] > kh_value[0] or dict_data['kh'] < kh_value[1]:

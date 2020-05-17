@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import math
 
 
 class init_para(object):
@@ -69,7 +70,7 @@ class Process3D(object):
             P = self.change_coor_to_ground(P)
             return P
         else:
-            return None
+            return np.array([[0, 0, 0]]).T
 
     def removeDistortion(self, point, init_para_cam):
         xd = (point[0] - init_para_cam.u0) / init_para_cam.fx
@@ -121,75 +122,33 @@ class Process3D(object):
 
     def calculateShift(self, P, P_lhorn, P_rhorn):
         # each points is a 3D points with numpy 1*3 [x,y,z]
+        # theta angle of pantograph compare to herizonal
         vector_a = np.squeeze(P - P_rhorn)
         vector_b = np.squeeze(P_lhorn - P_rhorn)
+        theta = math.atan2(vector_b[2], vector_b[0])
         percent = vector_a.dot(vector_b)/np.square(np.linalg.norm(vector_b))
         vector_c = percent * vector_b
         distance = (0.5 - percent) * np.linalg.norm(vector_b)
         height = np.linalg.norm(vector_a - vector_c)
-        return distance, height
+        length = np.linalg.norm(vector_b)
+        return distance, height, length, theta
 
-    def getPolarLine(self, p_x, p_y, r_p_x, r_p_y):
-        point_l = np.array([p_x, p_y])
-        point_r = np.array([r_p_x, r_p_y])
+    def getPolarLine(self, point_l, point_r):
+        # point_l = np.array([p_x, p_y])
         point_l_rm = self.removeDistortion(point_l, init_left)
-        point_r_rm = self.removeDistortion(point_r, init_right)
         p_left = np.array([[point_l_rm[0], point_l_rm[1], 1]]).T
-        p_right_T = np.array(([[point_r_rm[0], point_r_rm[1], 1]]))
-        Ml1 = self.init_para_l.Matrix
-        ml = np.zeros([3, 1], dtype='float')
-        Mr1 = np.dot(self.init_para_r.Matrix, self.exte_para_1_2.R)
-        mr = np.dot(self.init_para_r.Matrix, self.exte_para_1_2.T)
-        temp = np.dot(Mr1, np.linalg.inv(Ml1))
-        m = mr - np.dot(temp, ml)
-        m_x = self.getTxMatrix(m)
-        temp = np.dot(m_x, Mr1)
-        F = np.dot(temp, np.linalg.inv(Ml1))
+        E = np.dot(self.getTxMatrix(self.exte_para_1_2.T), self.exte_para_1_2.R)
+        K_r_minusT = np.linalg.inv(self.init_para_r.Matrix).T
+        K_l_minus = np.linalg.inv(self.init_para_l.Matrix)
+        F = np.dot(K_r_minusT, np.dot(E, K_l_minus))
         line_r = np.dot(F, p_left)
+
         # test
+        # point_r = np.array([r_p_x, r_p_y])
+        point_r_rm = self.removeDistortion(point_r, init_right)
+        p_right_T = np.array(([[point_r_rm[0], point_r_rm[1], 1]]))
         k = np.dot(p_right_T, line_r)
-        # test P 3D
-        P = self.reconstruct3D(point_l, point_r)
-        p_left_temp = np.dot(Ml1, P)
-        p_left_temp = p_left_temp / p_left_temp[2]
-        P_r = np.dot(self.exte_para_1_2.R, P) + self.exte_para_1_2.T
-        p_right_temp = np.dot(self.init_para_r.Matrix, P_r)
-        p_right_temp = np.dot(Mr1, P) + mr
-        p_right_temp = p_right_temp/p_right_temp[2]
-        P_test = self.reconstruct3D(point_l, np.array([p_right_temp[0], p_right_temp[1]]))
-
-        #
-        A = np.zeros([4, 3], dtype='float')
-        u1 = point_l_rm[0]
-        v1 = point_l_rm[1]
-        u2 = point_r_rm[0]
-        v2 = point_r_rm[1]
-        A[0,0] = Ml1[2, 0]*u1-Ml1[0,0]
-        A[0,1] = u1*Ml1[2,1] - Ml1[0,1]
-        A[0,2] = u1*Ml1[2,2] - Ml1[0,2]
-
-        A[1,0] = Ml1[2, 0]*v1-Ml1[1,0]
-        A[1, 1] = v1 * Ml1[2, 1] - Ml1[1, 1]
-        A[1, 2] = v1 * Ml1[2, 2] - Ml1[1, 2]
-
-        A[2, 0] = Mr1[2, 0] * u2 - Mr1[0, 0]
-        A[2, 1] = u2 * Mr1[2, 1] - Mr1[0, 1]
-        A[2, 2] = u2 * Mr1[2, 2] - Mr1[0, 2]
-        A[3, 0] = Mr1[2, 0] * v2 - Mr1[1, 0]
-        A[3, 1] = v2 * Mr1[2, 1] - Mr1[1, 1]
-        A[3, 2] = v2 * Mr1[2, 2] - Mr1[1, 2]
-
-        b = np.zeros([4, 1], dtype='float')
-        b[0, 0] = ml[0] - u1* ml[2]
-        b[1, 0] = ml[1] - v1* ml[2]
-        b[2, 0] = mr[0] - u2 * mr[2]
-        b[3, 0] = mr[1] - v2 * mr[2]
-        temp_ata = np.dot(A.T, A)
-        temp_atb = np.dot(A.T, b)
-        P_temp = np.dot(np.linalg.inv(temp_ata), temp_atb)
-        # 当前标定下对应于 left的right坐标为【1384，363】
-
-        return line_r
+        return line_r, k
         pass
 
     def getTxMatrix(self, t):

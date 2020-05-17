@@ -45,10 +45,10 @@ if __name__ == '__main__':
     pro3d = Process3D()
     ana_data = AnalysisData(saveResult, pro3d, testShow)
 
-    gt_file_l = 'D:\PACanalysis\gt'
-    num = 10000
+    gt_file_l = 'D:\PACanalysis\gt\R'
+    num = 3000
     df_gt = ldata.load_gt_l(gt_file_l, num)
-    title = 'locate_refine_update'
+    title = 'locate_r'
 
     with open(os.path.join(os.path.join(system_path, 'result', title, 'test_locate.pkl')), 'rb') as file:
         locate_output = pickle.loads(file.read())
